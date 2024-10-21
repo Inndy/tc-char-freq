@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Frequency and Coloring</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        .output {
+            background-color: #2d2d2d;
+            padding: 10px;
+            border: 1px solid #444;
+            white-space: pre-wrap;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        /* Updated color scheme for comfort */
+        .green { color: #a3d977; }    /* Soft green */
+        .white { color: #d0d0d0; }    /* Soft off-white */
+        .yellow { color: #f4d35e; }   /* Muted yellow */
+        .red { color: #ff6b6b; }      /* Soft red */
+        .magenta { color: #c792ea; }  /* Soft magenta */
+        .red-grey { color: #b36b6b; }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #2d2d2d;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px;
+            font-family: monospace;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <textarea id="textInput" placeholder="Enter multiline text here"></textarea>
+    </div>
+    <button onclick="processText()">Process Text</button>
+    <ul>
+      <li class="green">0.2% 約 Top100</li>
+      <li class="white">0.1% 約 Top200</li>
+      <li class="yellow">0.08% 約 Top300</li>
+      <li class="red">0.005% 約 Top500</li>
+      <li class="magenta">&gt;0% 仍在統計資料內</li>
+      <li class="red-grey">超出統計範圍</li>
+    </ul>
+    <pre id="output" class="output"></pre>
+
+    <script>
+        const punctuations = '，。？！、 ,.?!';
+        let char_count = {};
+        let char_freq = {};
+        let totalCount = 0;
+
+        const ranks = [
+            [0.2, 'green'], // Top 100
+            [0.1, 'white'], // Top 200
+            [0.08, 'yellow'], // Top 300
+            [0.005, 'red'], // Top 500
+            [0.0, 'magenta'], // Still in dict
+            [-Infinity, 'red-grey'] // Even not in dict
+        ];
+
+        function getColor(freq) {
+            for (let [threshold, color] of ranks) {
+                if (freq > threshold) {
+                    return color;
+                }
+            }
+            throw new Error("Invalid frequency: " + freq);
+        }
+
+        function printLine(text) {
+            const output_div = document.getElementById('output');
+            const output = document.createElement('p');
+            output_div.appendChild(output);
+            output_div.appendChild(document.createElement('hr'));
+
+            for (let c of text) {
+                let span = document.createElement('span');
+                if (punctuations.includes(c) || c.charCodeAt(0) >= 0x20 && c.charCodeAt(0) <= 0x7f) {
+                    span.className = 'green';
+                } else {
+                    let freq = char_freq[c] || -1;
+                    span.className = getColor(freq);
+                }
+                span.textContent = c;
+                output.appendChild(span);
+            }
+        }
+
+        function calculateFrequencies(content) {
+            char_count = {};
+            totalCount = 0;
+
+            const lines = content.trim().split('\n');
+            for (let line of lines) {
+                const [char, countStr] = line.split(',');
+                const count = parseInt(countStr, 10);
+                if (!isNaN(count)) {
+                    char_count[char] = count;
+                    totalCount += count;
+                }
+            }
+
+            // Calculate frequencies
+            char_freq = {};
+            for (let char in char_count) {
+                char_freq[char] = (char_count[char] / totalCount) * 100;
+            }
+        }
+
+        function processText() {
+            const inputText = document.getElementById('textInput').value;
+            if (inputText) {
+                printLine(inputText);
+            }
+        }
+
+        async function init() {
+            const resp = await fetch('table.txt');
+            calculateFrequencies(await resp.text());
+            printLine('早安你好');
+        }
+
+        init();
+    </script>
+</body>
+</html>
